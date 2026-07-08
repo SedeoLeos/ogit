@@ -184,6 +184,10 @@ func copySelfTo(path string) error {
 		return err
 	}
 
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
 	return os.WriteFile(path, data, 0755)
 }
 
