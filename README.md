@@ -14,6 +14,12 @@ go mod tidy
 go run .
 ```
 
+Pour un env local, tu peux definir:
+
+```bash
+set OGIT_ENV_FILE=.env
+```
+
 ## Build Linux
 
 ### Archive zip directe
@@ -42,15 +48,27 @@ GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o dis
 
 1. Copier `dist/ogit-linux-amd64.zip` sur le serveur.
 2. Decompresser l'archive.
-3. Rendre `ogit` executable si besoin.
-4. Le placer dans un dossier de ton choix, par exemple `/opt/ogit/ogit`.
+3. Installer `ogit` dans `/opt/ogit/ogit` ou dans un dossier de ton choix.
+4. Placer la configuration dans `/opt/ogit/.env`.
+5. Rendre le fichier executable.
 
 Exemple:
 
 ```bash
-sudo install -d /opt/ogit
+sudo mkdir -p /opt/ogit
 unzip ogit-linux-amd64.zip
 sudo install -m 755 ogit /opt/ogit/ogit
+sudo install -m 600 .env /opt/ogit/.env
+```
+
+## Fichier .env
+
+Le binaire charge par defaut `/opt/ogit/.env`.
+
+Tu peux aussi surcharger le chemin avec:
+
+```bash
+export OGIT_ENV_FILE=/chemin/vers/.env
 ```
 
 ## Workflow CI
