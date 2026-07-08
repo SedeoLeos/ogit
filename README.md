@@ -20,6 +20,17 @@ Pour un env local, tu peux definir:
 set OGIT_ENV_FILE=.env
 ```
 
+## Lint
+
+```bash
+make lint
+```
+
+Le lint exécute:
+
+- `gofmt -l .`
+- `go vet ./...`
+
 ## Build Linux
 
 ### Archive zip directe
@@ -33,7 +44,7 @@ L'archive est generee dans `dist/ogit-linux-amd64.zip` et contient le binaire `o
 ### Binaire seul
 
 ```bash
-./scripts/build-linux.sh
+make build
 ```
 
 Le binaire est genere dans `dist/ogit-linux-amd64`.
@@ -46,19 +57,37 @@ GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o dis
 
 ## Installation sur le serveur
 
-1. Copier `dist/ogit-linux-amd64.zip` sur le serveur.
-2. Decompresser l'archive.
-3. Installer `ogit` dans `/opt/ogit/ogit` ou dans un dossier de ton choix.
-4. Placer la configuration dans `/opt/ogit/.env`.
-5. Rendre le fichier executable.
-
-Exemple:
+Le plus simple est:
 
 ```bash
-sudo mkdir -p /opt/ogit
-unzip ogit-linux-amd64.zip
-sudo install -m 755 ogit /opt/ogit/ogit
-sudo install -m 600 .env /opt/ogit/.env
+make install-server
+```
+
+Ce script:
+
+- crée `/opt/ogit`
+- installe le binaire dans `/opt/ogit/ogit`
+- crée le lien `/usr/local/bin/ogit`
+- crée `/opt/ogit/.env` depuis `env.sample` si le fichier n'existe pas encore
+
+Ensuite tu peux éditer le fichier:
+
+```bash
+sudo nano /opt/ogit/.env
+```
+
+Exemple de contenu:
+
+```env
+GITHUB_INSTALLATION_ID=123456
+GITHUB_APP_ID=123456
+GITHUB_PRIVATE_KEY_PATH=/opt/ogit/private-key.pem
+```
+
+Puis copie la clé privée:
+
+```bash
+sudo install -m 600 private-key.pem /opt/ogit/private-key.pem
 ```
 
 ## Fichier .env
@@ -78,16 +107,8 @@ Le fichier `.github/workflows/ci.yml` lance:
 - `go test ./...`
 - un build Linux amd64 au format zip
 
-## Arborescence ajoutee
-
-- `scripts/build-linux.sh`
-- `scripts/build-zip.ps1`
-- `.github/workflows/ci.yml`
-
-
 ## Commandes Git
 
-- ogit clone <url> [dossier] transmet le dossier cible à git clone.
-- ogit pull [options] transmet les options à git pull.
-- ogit fetch [options] transmet les options à git fetch.
-
+- `ogit clone <url> [dossier]` transmet le dossier cible à `git clone`.
+- `ogit pull [options]` transmet les options à `git pull`.
+- `ogit fetch [options]` transmet les options à `git fetch`.
