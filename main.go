@@ -153,7 +153,7 @@ func main() {
 	switch command {
 	case "clone":
 		if len(os.Args) < 3 {
-			fmt.Println("usage: ogit clone <repo-url>")
+			fmt.Println("usage: ogit clone <repo-url> [directory]")
 			return
 		}
 
@@ -162,11 +162,18 @@ func main() {
 			panic(err)
 		}
 
-		err = runGit([]string{"clone", authURL}, "")
+		cloneArgs := []string{"clone", authURL}
+		if len(os.Args) > 3 {
+			cloneArgs = append(cloneArgs, os.Args[3:]...)
+		}
+
+		err = runGit(cloneArgs, "")
 	case "pull":
-		err = runGit([]string{"pull"}, token)
+		pullArgs := append([]string{"pull"}, os.Args[2:]...)
+		err = runGit(pullArgs, token)
 	case "fetch":
-		err = runGit([]string{"fetch"}, token)
+		fetchArgs := append([]string{"fetch"}, os.Args[2:]...)
+		err = runGit(fetchArgs, token)
 	default:
 		// laisse passer les autres commandes Git
 		// ex: ogit status, ogit log...

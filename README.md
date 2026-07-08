@@ -83,3 +83,11 @@ Le fichier `.github/workflows/ci.yml` lance:
 - `scripts/build-linux.sh`
 - `scripts/build-zip.ps1`
 - `.github/workflows/ci.yml`
+
+
+## Commandes Git
+
+- ogit clone <url> [dossier] transmet le dossier cible à git clone.
+- ogit pull [options] transmet les options à git pull.
+- ogit fetch [options] transmet les options à git fetch.
+
