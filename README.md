@@ -58,10 +58,16 @@ Le binaire est genere dans `dist/ogit-linux-amd64`.
 sudo ./ogit config init
 ```
 
+Optionnellement, tu peux fournir un fichier PEM au lieu de le coller:
+
+```bash
+sudo ./ogit config init --private-file /chemin/vers/private-key.pem
+```
+
 3. Renseigner `GITHUB_APP_ID` et `GITHUB_INSTALLATION_ID`.
-4. Coller la clé privée PEM, puis taper `END` sur une ligne seule.
+4. Si `--private-file` n'est pas fourni, coller la clé privée PEM, puis taper `END` sur une ligne seule.
 5. Le binaire est copie dans `/opt/ogit/ogit`.
-6. Le lien `/usr/local/bin/ogit` est créé automatiquement.
+6. Le binaire est installe dans `/usr/local/bin/ogit`.
 7. Le fichier `/opt/ogit/.env` est créé automatiquement.
 8. La clé privée est stockée dans `/opt/ogit/private-key.pem`.
 
@@ -94,4 +100,5 @@ Le fichier `.github/workflows/ci.yml` lance:
 - `ogit pull [options]` transmet les options à `git pull`.
 - `ogit fetch [options]` transmet les options à `git fetch`.
 - `ogit config init` crée la configuration serveur et installe le binaire.
+- `ogit config init --private-file <path>` utilise un fichier PEM au lieu du collage interactif.
 - `ogit config show` affiche le chemin du fichier env utilisé.

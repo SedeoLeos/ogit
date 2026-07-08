@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -22,8 +21,12 @@ import (
 const defaultEnvPath = "/opt/ogit/.env"
 const installDir = "/opt/ogit"
 const installBin = "/opt/ogit/ogit"
-const pathLink = "/usr/local/bin/ogit"
+const pathBin = "/usr/local/bin/ogit"
 const privateKeyFile = "/opt/ogit/private-key.pem"
+
+type configInitOptions struct {
+	privateFile string
+}
 
 func loadEnv() error {
 	envPath := os.Getenv("OGIT_ENV_FILE")
@@ -165,7 +168,7 @@ func writePrivateKey(content string) error {
 	return os.WriteFile(privateKeyFile, []byte(content), 0600)
 }
 
-func copySelfToInstallDir() error {
+func copySelfTo(path string) error {
 	src, err := os.Executable()
 	if err != nil {
 		return err
@@ -181,14 +184,14 @@ func copySelfToInstallDir() error {
 		return err
 	}
 
-	return os.WriteFile(installBin, data, 0755)
+	return os.WriteFile(path, data, 0755)
 }
 
-func updatePathLink() error {
-	if err := os.Remove(pathLink); err != nil && !errors.Is(err, os.ErrNotExist) {
+func installBinary() error {
+	if err := copySelfTo(installBin); err != nil {
 		return err
 	}
-	return os.Symlink(installBin, pathLink)
+	return copySelfTo(pathBin)
 }
 
 func promptLine(reader *bufio.Reader, label string) (string, error) {
@@ -217,7 +220,40 @@ func promptPrivateKey(reader *bufio.Reader) (string, error) {
 	return strings.Join(lines, "\n") + "\n", nil
 }
 
-func configInit() error {
+func readPrivateKeyFromFile(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func parseConfigInitOptions(args []string) (configInitOptions, error) {
+	opts := configInitOptions{}
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch {
+		case arg == "--private-file":
+			if i+1 >= len(args) {
+				return opts, fmt.Errorf("--private-file requires a path")
+			}
+			opts.privateFile = args[i+1]
+			i++
+		case strings.HasPrefix(arg, "--private-file="):
+			opts.privateFile = strings.TrimPrefix(arg, "--private-file=")
+		default:
+			return opts, fmt.Errorf("unknown option: %s", arg)
+		}
+	}
+	return opts, nil
+}
+
+func configInit(args []string) error {
+	opts, err := parseConfigInitOptions(args)
+	if err != nil {
+		return err
+	}
+
 	reader := bufio.NewReader(os.Stdin)
 
 	appID, err := promptLine(reader, "GITHUB_APP_ID: ")
@@ -230,9 +266,17 @@ func configInit() error {
 		return err
 	}
 
-	privateKeyContent, err := promptPrivateKey(reader)
-	if err != nil {
-		return err
+	privateKeyContent := ""
+	if opts.privateFile != "" {
+		privateKeyContent, err = readPrivateKeyFromFile(opts.privateFile)
+		if err != nil {
+			return err
+		}
+	} else {
+		privateKeyContent, err = promptPrivateKey(reader)
+		if err != nil {
+			return err
+		}
 	}
 
 	if appID == "" || installationID == "" || strings.TrimSpace(privateKeyContent) == "" {
@@ -251,15 +295,11 @@ func configInit() error {
 		return err
 	}
 
-	if err := copySelfToInstallDir(); err != nil {
+	if err := installBinary(); err != nil {
 		return err
 	}
 
-	if err := updatePathLink(); err != nil {
-		return err
-	}
-
-	fmt.Println("configured ogit in /opt/ogit and linked /usr/local/bin/ogit")
+	fmt.Println("configured ogit in /opt/ogit and installed /usr/local/bin/ogit")
 	return nil
 }
 
@@ -271,7 +311,7 @@ func runConfig(args []string) error {
 
 	switch args[0] {
 	case "init":
-		return configInit()
+		return configInit(args[1:])
 	case "show":
 		fmt.Println(envFilePath())
 		return nil
