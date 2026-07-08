@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"strconv"
@@ -101,10 +102,24 @@ func getGitHubToken() (string, error) {
 	return token.GetToken(), nil
 }
 
+func authCloneURL(rawURL, token string) (string, error) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+
+	if parsed.Scheme != "https" {
+		return rawURL, nil
+	}
+
+	parsed.User = url.UserPassword("x-access-token", token)
+	return parsed.String(), nil
+}
+
 func runGit(args []string, token string) error {
-	gitArgs := []string{
-		"-c",
-		"http.extraHeader=Authorization: Bearer " + token,
+	gitArgs := []string{}
+	if token != "" {
+		gitArgs = append(gitArgs, "-c", "http.extraHeader=Authorization: Bearer "+token)
 	}
 
 	gitArgs = append(gitArgs, args...)
@@ -142,8 +157,12 @@ func main() {
 			return
 		}
 
-		url := os.Args[2]
-		err = runGit([]string{"clone", url}, token)
+		authURL, err := authCloneURL(os.Args[2], token)
+		if err != nil {
+			panic(err)
+		}
+
+		err = runGit([]string{"clone", authURL}, "")
 	case "pull":
 		err = runGit([]string{"pull"}, token)
 	case "fetch":
