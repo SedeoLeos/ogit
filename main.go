@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +20,9 @@ import (
 )
 
 const defaultEnvPath = "/opt/ogit/.env"
+const installDir = "/opt/ogit"
+const installBin = "/opt/ogit/ogit"
+const pathLink = "/usr/local/bin/ogit"
 
 func loadEnv() error {
 	envPath := os.Getenv("OGIT_ENV_FILE")
@@ -132,14 +138,124 @@ func runGit(args []string, token string) error {
 	return cmd.Run()
 }
 
+func envFilePath() string {
+	envPath := os.Getenv("OGIT_ENV_FILE")
+	if envPath == "" {
+		return defaultEnvPath
+	}
+	return envPath
+}
+
+func ensureInstallDir() error {
+	return os.MkdirAll(installDir, 0755)
+}
+
+func writeEnvFile(path, appID, installationID, privateKeyPath string) error {
+	content := fmt.Sprintf(
+		"GITHUB_INSTALLATION_ID=%s\nGITHUB_APP_ID=%s\nGITHUB_PRIVATE_KEY_PATH=%s\n",
+		installationID,
+		appID,
+		privateKeyPath,
+	)
+	return os.WriteFile(path, []byte(content), 0600)
+}
+
+func copySelfToInstallDir() error {
+	src, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	src, err = filepath.EvalSymlinks(src)
+	if err != nil {
+		return err
+	}
+
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(installBin, data, 0755)
+}
+
+func updatePathLink() error {
+	if err := os.Remove(pathLink); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return os.Symlink(installBin, pathLink)
+}
+
+func configInit() error {
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Print("GITHUB_APP_ID: ")
+	appID, _ := reader.ReadString('\n')
+	fmt.Print("GITHUB_INSTALLATION_ID: ")
+	installationID, _ := reader.ReadString('\n')
+	fmt.Print("GITHUB_PRIVATE_KEY_PATH: ")
+	privateKeyPath, _ := reader.ReadString('\n')
+
+	appID = strings.TrimSpace(appID)
+	installationID = strings.TrimSpace(installationID)
+	privateKeyPath = strings.TrimSpace(privateKeyPath)
+
+	if appID == "" || installationID == "" || privateKeyPath == "" {
+		return fmt.Errorf("all fields are required")
+	}
+
+	if err := ensureInstallDir(); err != nil {
+		return err
+	}
+
+	if err := writeEnvFile(envFilePath(), appID, installationID, privateKeyPath); err != nil {
+		return err
+	}
+
+	if err := copySelfToInstallDir(); err != nil {
+		return err
+	}
+
+	if err := updatePathLink(); err != nil {
+		return err
+	}
+
+	fmt.Println("configured ogit in /opt/ogit and linked /usr/local/bin/ogit")
+	return nil
+}
+
+func runConfig(args []string) error {
+	if len(args) == 0 {
+		fmt.Println("usage: ogit config init|show")
+		return nil
+	}
+
+	switch args[0] {
+	case "init":
+		return configInit()
+	case "show":
+		fmt.Println(envFilePath())
+		return nil
+	default:
+		return fmt.Errorf("unknown config command: %s", args[0])
+	}
+}
+
 func main() {
+	if len(os.Args) >= 3 && os.Args[1] == "config" {
+		if err := runConfig(os.Args[2:]); err != nil {
+			panic(err)
+		}
+		return
+	}
+
 	err := loadEnv()
 	if err != nil {
 		panic(err)
 	}
 
 	if len(os.Args) < 2 {
-		fmt.Println("usage: ogit clone|pull|fetch")
+		fmt.Println("usage: ogit clone|pull|fetch|config")
 		return
 	}
 

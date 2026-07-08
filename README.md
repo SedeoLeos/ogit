@@ -49,45 +49,24 @@ make build
 
 Le binaire est genere dans `dist/ogit-linux-amd64`.
 
-### A la main
-
-```bash
-GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o dist/ogit-linux-amd64 .
-```
-
 ## Installation sur le serveur
 
-Le plus simple est:
+1. Decompresser le zip.
+2. Lancer:
 
 ```bash
-make install-server
+sudo ./ogit config init
 ```
 
-Ce script:
+3. Renseigner les valeurs demandées.
+4. Le binaire est copie dans `/opt/ogit/ogit`.
+5. Le lien `/usr/local/bin/ogit` est créé automatiquement.
+6. Le fichier `/opt/ogit/.env` est créé automatiquement.
 
-- crée `/opt/ogit`
-- installe le binaire dans `/opt/ogit/ogit`
-- crée le lien `/usr/local/bin/ogit`
-- crée `/opt/ogit/.env` depuis `env.sample` si le fichier n'existe pas encore
-
-Ensuite tu peux éditer le fichier:
+Tu peux ensuite executer:
 
 ```bash
-sudo nano /opt/ogit/.env
-```
-
-Exemple de contenu:
-
-```env
-GITHUB_INSTALLATION_ID=123456
-GITHUB_APP_ID=123456
-GITHUB_PRIVATE_KEY_PATH=/opt/ogit/private-key.pem
-```
-
-Puis copie la clé privée:
-
-```bash
-sudo install -m 600 private-key.pem /opt/ogit/private-key.pem
+ogit clone <url> [dossier]
 ```
 
 ## Fichier .env
@@ -112,3 +91,5 @@ Le fichier `.github/workflows/ci.yml` lance:
 - `ogit clone <url> [dossier]` transmet le dossier cible à `git clone`.
 - `ogit pull [options]` transmet les options à `git pull`.
 - `ogit fetch [options]` transmet les options à `git fetch`.
+- `ogit config init` crée la configuration serveur et installe le binaire.
+- `ogit config show` affiche le chemin du fichier env utilisé.
