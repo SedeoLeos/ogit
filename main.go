@@ -23,6 +23,7 @@ const defaultEnvPath = "/opt/ogit/.env"
 const installDir = "/opt/ogit"
 const installBin = "/opt/ogit/ogit"
 const pathLink = "/usr/local/bin/ogit"
+const privateKeyFile = "/opt/ogit/private-key.pem"
 
 func loadEnv() error {
 	envPath := os.Getenv("OGIT_ENV_FILE")
@@ -150,14 +151,18 @@ func ensureInstallDir() error {
 	return os.MkdirAll(installDir, 0755)
 }
 
-func writeEnvFile(path, appID, installationID, privateKeyPath string) error {
+func writeEnvFile(path, appID, installationID string) error {
 	content := fmt.Sprintf(
 		"GITHUB_INSTALLATION_ID=%s\nGITHUB_APP_ID=%s\nGITHUB_PRIVATE_KEY_PATH=%s\n",
 		installationID,
 		appID,
-		privateKeyPath,
+		privateKeyFile,
 	)
 	return os.WriteFile(path, []byte(content), 0600)
+}
+
+func writePrivateKey(content string) error {
+	return os.WriteFile(privateKeyFile, []byte(content), 0600)
 }
 
 func copySelfToInstallDir() error {
@@ -186,21 +191,51 @@ func updatePathLink() error {
 	return os.Symlink(installBin, pathLink)
 }
 
+func promptLine(reader *bufio.Reader, label string) (string, error) {
+	fmt.Print(label)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(line), nil
+}
+
+func promptPrivateKey(reader *bufio.Reader) (string, error) {
+	fmt.Println("Paste the private key content, then type END on its own line:")
+	var lines []string
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			return "", err
+		}
+		clean := strings.TrimRight(line, "\r\n")
+		if clean == "END" {
+			break
+		}
+		lines = append(lines, clean)
+	}
+	return strings.Join(lines, "\n") + "\n", nil
+}
+
 func configInit() error {
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Print("GITHUB_APP_ID: ")
-	appID, _ := reader.ReadString('\n')
-	fmt.Print("GITHUB_INSTALLATION_ID: ")
-	installationID, _ := reader.ReadString('\n')
-	fmt.Print("GITHUB_PRIVATE_KEY_PATH: ")
-	privateKeyPath, _ := reader.ReadString('\n')
+	appID, err := promptLine(reader, "GITHUB_APP_ID: ")
+	if err != nil {
+		return err
+	}
 
-	appID = strings.TrimSpace(appID)
-	installationID = strings.TrimSpace(installationID)
-	privateKeyPath = strings.TrimSpace(privateKeyPath)
+	installationID, err := promptLine(reader, "GITHUB_INSTALLATION_ID: ")
+	if err != nil {
+		return err
+	}
 
-	if appID == "" || installationID == "" || privateKeyPath == "" {
+	privateKeyContent, err := promptPrivateKey(reader)
+	if err != nil {
+		return err
+	}
+
+	if appID == "" || installationID == "" || strings.TrimSpace(privateKeyContent) == "" {
 		return fmt.Errorf("all fields are required")
 	}
 
@@ -208,7 +243,11 @@ func configInit() error {
 		return err
 	}
 
-	if err := writeEnvFile(envFilePath(), appID, installationID, privateKeyPath); err != nil {
+	if err := writePrivateKey(privateKeyContent); err != nil {
+		return err
+	}
+
+	if err := writeEnvFile(envFilePath(), appID, installationID); err != nil {
 		return err
 	}
 

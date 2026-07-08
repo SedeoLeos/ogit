@@ -58,10 +58,12 @@ Le binaire est genere dans `dist/ogit-linux-amd64`.
 sudo ./ogit config init
 ```
 
-3. Renseigner les valeurs demandées.
-4. Le binaire est copie dans `/opt/ogit/ogit`.
-5. Le lien `/usr/local/bin/ogit` est créé automatiquement.
-6. Le fichier `/opt/ogit/.env` est créé automatiquement.
+3. Renseigner `GITHUB_APP_ID` et `GITHUB_INSTALLATION_ID`.
+4. Coller la clé privée PEM, puis taper `END` sur une ligne seule.
+5. Le binaire est copie dans `/opt/ogit/ogit`.
+6. Le lien `/usr/local/bin/ogit` est créé automatiquement.
+7. Le fichier `/opt/ogit/.env` est créé automatiquement.
+8. La clé privée est stockée dans `/opt/ogit/private-key.pem`.
 
 Tu peux ensuite executer:
 
